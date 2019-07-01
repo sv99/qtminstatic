@@ -1,52 +1,38 @@
 QT minimal static
 =================
 
-Minimal project for test static linking QT5
+Minimal project for test static linking with QT5
 
-**Important!!** Need static build Qt on sdk 10.13. 
+OSX SDK for static build
+------------------------
+
+**Important!!** If you want the code to work on 10.13 too need SDK 10.13!!
+Otherwise static linking finished with error. 
+
+Week linking allow run code compiled from sdk 10.14 on lower platform, but static linking not found this function.
+QT tested code on latest platform only!!
+
+Problem with new function which not exist on 10.13.
+If build with 10.14 SDK called function specified for this platform. Week linking allow run
+this code for normal (shared) builded Qt. For static build this function not founded on lower platform.
+
+Example using QT_MACOS_PLATFORM_SDK_EQUAL_OR_ABOVE(__MAC_10_14)
  
-    # print current SDK
-    xcode-select -p
-    # SDK version
-    xcrun -sdk macosx --show-sdk-path
-    xcrun --show-sdk-path
-    xcrun --show-sdk-version
-
-**Important!!** SDK must be 10.13 - if system not Mojave!!  On the fly switch fail.
-Need reset cmake cache.  
-
-    # static build QT
-    # Qt LTS 5.12.4
-    ./configure -opensource  -confirm-license -static --prefix=../static_64 -debug-and-release \
-        -qt-zlib -qt-libpng -qt-freetype -qt-libjpeg \
-        -no-gif -no-cups -no-iconv -no-pch -no-dbus -no-opengl -no-fontconfig -no-openssl \
-        -make libs -nomake examples -nomake tests \
-        -skip qt3d -skip qtactiveqt -skip qtandroidextras -skip qtcanvas3d -skip qtcharts -skip qtconnectivity \
-        -skip qtdatavis3d -skip qtdeclarative -skip qtdoc -skip qtgamepad -skip qtgraphicaleffects \
-        -skip qtimageformats -skip qtlocation -skip qtmacextras -skip qtmultimedia -skip qtnetworkauth \
-        -skip qtpurchasing -skip qtquickcontrols -skip qtquickcontrols2 -skip qtremoteobjects -skip qtscript -skip qtscxml \
-        -skip qtsensors -skip qtserialbus -skip qtserialport -skip qtspeech -skip qtsvg \
-        -skip qttranslations -skip qtvirtualkeyboard -skip qtwayland -skip qtwebchannel -skip qtwebengine \
-        -skip qtwebglplugin -skip qtwebsockets -skip qtwebview -skip qtwinextras -skip qtx11extras -skip qtxmlpatterns
-    make
-    make install
-
-
-Week linking allow run cod compilled from sdk 10.14 allow run function on lower platform.
-
-    # corelib/kernel/qcore_mac_objc.mm
-    #
-    bool qt_mac_applicationIsInDarkMode()
-    {
-    #if QT_MACOS_PLATFORM_SDK_EQUAL_OR_ABOVE(__MAC_10_14)
-        if (__builtin_available(macOS 10.14, *)) {
-            auto appearance = [NSApp.effectiveAppearance bestMatchFromAppearancesWithNames:
-                    @[ NSAppearanceNameAqua, NSAppearanceNameDarkAqua ]];
-            return [appearance isEqualToString:NSAppearanceNameDarkAqua];
-        }
-    #endif
-        return false;
+```c++
+# qtbase/src/corelib/kernel/qcore_mac_objc.mm
+#
+bool qt_mac_applicationIsInDarkMode()
+{
+#if QT_MACOS_PLATFORM_SDK_EQUAL_OR_ABOVE(__MAC_10_14)
+    if (__builtin_available(macOS 10.14, *)) {
+        auto appearance = [NSApp.effectiveAppearance bestMatchFromAppearancesWithNames:
+                @[ NSAppearanceNameAqua, NSAppearanceNameDarkAqua ]];
+        return [appearance isEqualToString:NSAppearanceNameDarkAqua];
     }
+#endif
+    return false;
+}
+```
 
 Error with static linking on 10.13:
 
@@ -54,5 +40,66 @@ Error with static linking on 10.13:
         "_NSAppearanceNameDarkAqua", referenced from:
             qt_mac_applicationIsInDarkMode() in libQt5Core.a(qcore_mac_objc.o)
 
-static linking
---------------
+On Qt 5.12.4 - bug need patch - bug report QTBUG-76777 created.
+
+```bash
+    cd [QT_SRC]
+    patch -p1 < <PATH>/qcore_for_sdk_10_13.patch
+```
+
+Check and select SDK  
+ 
+```bash
+# print current SDK
+xcode-select -p
+# SDK version
+xcrun -sdk macosx --show-sdk-path
+xcrun --show-sdk-path
+xcrun --show-sdk-version
+```
+
+SDK 10.13 - in the XCode 9.
+ 
+You can download CommandLineTool from https://developer.apple.com/download
+
+[switch between multiple version of Command Line Tools](https://stackoverflow.com/questions/47455245/how-to-switch-between-multiple-command-line-tools-installations-in-mac-os-x-wit)
+
+Qt static build from source
+---------------------------
+
+```bash
+# static build QT to QT_INSTALL_DIR/static_64
+# Qt LTS 5.12.4
+./configure -opensource  -confirm-license -static --prefix=../static_64 -debug-and-release \
+    -qt-zlib -qt-libpng -qt-freetype -qt-libjpeg \
+    -no-gif -no-cups -no-iconv -no-pch -no-dbus -no-opengl -no-fontconfig -no-openssl \
+    -make libs -nomake examples -nomake tests \
+    -skip qt3d -skip qtactiveqt -skip qtandroidextras -skip qtcanvas3d -skip qtcharts -skip qtconnectivity \
+    -skip qtdatavis3d -skip qtdeclarative -skip qtdoc -skip qtgamepad -skip qtgraphicaleffects \
+    -skip qtimageformats -skip qtlocation -skip qtmacextras -skip qtmultimedia -skip qtnetworkauth \
+    -skip qtpurchasing -skip qtquickcontrols -skip qtquickcontrols2 -skip qtremoteobjects -skip qtscript -skip qtscxml \
+    -skip qtsensors -skip qtserialbus -skip qtserialport -skip qtspeech -skip qtsvg \
+    -skip qttranslations -skip qtvirtualkeyboard -skip qtwayland -skip qtwebchannel -skip qtwebengine \
+    -skip qtwebglplugin -skip qtwebsockets -skip qtwebview -skip qtwinextras -skip qtx11extras -skip qtxmlpatterns
+make j6
+make install
+```
+
+change code for static build
+----------------------------
+
+   The Qt modules' export macros.
+   The options are:
+    - defined(QT_STATIC): Qt was built or is being built in static mode
+    - defined(QT_SHARED): Qt was built or is being built in shared/dynamic mode
+
+Plugins not loaded in the static build. Need explicitly import plugins.
+
+```c++
+    #ifdef QT_STATIC
+    QT_BEGIN_NAMESPACE
+    Q_IMPORT_PLUGIN (QCocoaIntegrationPlugin);
+    Q_IMPORT_PLUGIN (QMacStylePlugin);
+    QT_END_NAMESPACE
+    #endif
+```

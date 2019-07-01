@@ -1,18 +1,23 @@
 # based on DoQtMess.cmake from https://github.com/siavashk/qt5-static-hello-world
+# fill QT_LIBRARIES with all static library from
 
-get_filename_component(_QT5_INSTALL_PREFIX "${Qt5_DIR}/../../../" ABSOLUTE)
-# let's not be picky, just throw all the available static libraries at the linker and let it figure out which ones are actually needed
-# a 'foreach' is used because 'target_link_libraries' doesn't handle lists correctly (the ; messes it up and nothing actually gets linked against)
-if(STATIC_TARGET_IS_IOS)
+if(STATIC_TARGET_IS_WINDOWS)
     set(_DEBUG_SUFFIX d)
 elseif(STATIC_TARGET_IS_IOS OR STATIC_TARGET_IS_MAC)
     set(_DEBUG_SUFFIX _debug)
 else()
     set(_DEBUG_SUFFIX)
 endif()
+#message("_DEBUG_SUFFIX: ${_DEBUG_SUFFIX}")
 
+get_filename_component(_QT5_INSTALL_PREFIX "${Qt5_DIR}/../../../" ABSOLUTE)
 set(_LIBS_BASE_DIR "${_QT5_INSTALL_PREFIX}/lib")
 #message("_LIBS_BASE_DIR: ${_LIBS_BASE_DIR}")
+
+# Let's not be picky, just throw all the available static libraries at the linker
+# and let it figure out which ones are actually needed.
+# A 'foreach' is used because 'target_link_libraries' doesn't handle
+# lists correctly (the ; messes it up and nothing actually gets linked against)
 file(GLOB_RECURSE _QT_LIBS "${_LIBS_BASE_DIR}/*${CMAKE_STATIC_LIBRARY_SUFFIX}")
 foreach(_QT_LIB ${_QT_LIBS})
     string(REGEX MATCH ".*${_DEBUG_SUFFIX}${CMAKE_STATIC_LIBRARY_SUFFIX}$" _IS_DEBUG_LIB ${_QT_LIB})
@@ -48,6 +53,7 @@ foreach(_QML_PLUGIN ${_QML_PLUGINS})
         endif()
     endif()
 endforeach()
+#message("QML QT_EXTRA_LIBS: ${QT_EXTRA_LIBS}")
 
 set(_PLUGINS_BASE_DIR "${_QT5_INSTALL_PREFIX}/plugins")
 file(GLOB_RECURSE _QT_PLUGINS "${_PLUGINS_BASE_DIR}/*${CMAKE_STATIC_LIBRARY_SUFFIX}")
@@ -73,8 +79,7 @@ set(QT_EXTRA_LIBS ${QT_EXTRA_LIBS}
 -framework CoreVideo -framework CoreMedia -framework AVFoundation -framework CoreFoundation -framework AudioUnit \
 -framework AppKit -framework AudioToolbox -framework IOSurface -framework Metal \
 -framework Security -framework CFNetwork -framework CoreBluetooth -framework IOBluetooth -framework CoreLocation \
--lz -lcups"
-)
+-lz -lcups")
 
 # static linking
 set(QT_LIBRARIES ${QT_LIBRARIES} ${QT_EXTRA_LIBS})

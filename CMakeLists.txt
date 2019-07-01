@@ -16,7 +16,7 @@ foreach(plugin ${Qt5Gui_PLUGINS})
     message("Gui Plugin ${plugin} is at location ${_loc}")
 endforeach()
 
-set(STATIC_TARGET_IS_MAC)
+set(STATIC_TARGET_IS_MAC true)
 include("DoQtStatic.cmake")
 
 message("QT libs: ${QT_LIBRARIES}")
